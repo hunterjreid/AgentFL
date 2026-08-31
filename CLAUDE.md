@@ -15,26 +15,30 @@ advance, and extending it costs an FL restart.
 Hunter's material: 130 to 150 BPM, Brazilian phonk and montagem, AU/NZ drill.
 Assume real projects with unsaved work open, never a scratch file.
 
-## Making a beat needs more than injection, and you must plan for that
+## Act on FL the way a human does: buttons and values
 
-Injection reaches mixing, plugin parameters, routing, transport and tempo. It
-does **not** reach the three things a beat actually needs: writing notes,
-loading instruments, and slicing audio. Do not start a beat task by pretending
-otherwise. The routes that work:
+Everything happens through injected Python. Not MIDI notes, not an external
+audio pipeline, not a server. The agent presses FL's buttons and changes FL's
+values, which is exactly what a person at the keyboard does.
 
-**Notes: play them in as real MIDI.** FL records MIDI arriving on its input
-port exactly as it records a keyboard. Arm recording and select the channel by
-injection, then send real note messages over the same loopMIDI port. The
-kernel deliberately leaves non-SysEx traffic unhandled so FL processes it
-normally. This is the mouse-free way to write notes and it is the backbone of
-beat making here.
+Two surfaces do this, and the second is the one that gets forgotten:
 
-**Vocal chops: cut outside, import the slices.** Slice detection and rendering
-belong in Python with ffmpeg, where they are testable. FL receives finished
-audio.
+**Values.** Direct setters. Mixer levels, pan, plugin parameters by index,
+routing, tempo, colours, names.
 
-**Instruments: cannot be loaded.** Work with what the project already has, or
-say a human has to add it. Never burn an hour trying.
+**Commands.** `transport.globalTransport(midi.FPT_*, 1)` dispatches FL's own
+internal command bus, the same one its buttons and hotkeys drive: play,
+record, stop, undo, save, snap and snap mode, cut, copy, paste, insert,
+delete, window switching. Paired with `ui.setFocused`, `ui.up/down/left/right`
+and `ui.enter`, this reaches things with no direct setter, by doing what a
+human would do to reach them.
+
+When something looks unreachable, ask how a person would do it with the
+keyboard, then find those commands on the bus. That is usually the answer, and
+it is a better instinct than concluding there is no API.
+
+Some things genuinely have no route and should be said plainly rather than
+attempted: loading a new plugin instance is the clearest one.
 
 ## Never move the physical cursor
 

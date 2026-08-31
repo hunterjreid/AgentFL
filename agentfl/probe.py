@@ -51,6 +51,23 @@ RESULT = results
 """
 
 
+# FPT_* are FL's internal command ids, the ones its buttons and hotkeys use.
+# Which exist varies by build, so list them rather than guessing at a name.
+_COMMANDS = """
+import midi as _m
+RESULT = {{
+    'FPT': sorted(n for n in dir(_m) if n.startswith('FPT_')),
+    'widgets': sorted(n for n in dir(_m) if n.startswith('wid')),
+}}
+"""
+
+
+def probe_commands(fl: bridge.Bridge) -> dict:
+    """List the command bus ids this FL build defines."""
+    res = fl.inject(_COMMANDS.format())
+    return res.value if res.ok else {"error": res.error}
+
+
 def probe_modules(fl: bridge.Bridge) -> dict:
     surface = {}
     for name in MODULES:
@@ -85,6 +102,7 @@ def main() -> int:
         out = {
             "fl_version": (info.get("data") or {}).get("fl_version"),
             "modules": probe_modules(fl),
+            "commands": probe_commands(fl),
         }
         if args.sandbox:
             out["sandbox"] = probe_sandbox(fl)
@@ -102,6 +120,14 @@ def main() -> int:
         else:
             fns = info["functions"]
             print(f"  {name:<12} {len(fns)} functions")
+
+    cmds = out.get("commands") or {}
+    if cmds.get("error"):
+        print(f"\ncommand bus: error: {cmds['error']}")
+    else:
+        print(f"\ncommand bus: {len(cmds.get('FPT', []))} FPT_ commands, "
+              f"{len(cmds.get('widgets', []))} widget ids")
+
     if args.sandbox:
         print("\nsandbox:")
         for label, (status, detail) in sorted(out["sandbox"].items()):

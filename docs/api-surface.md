@@ -46,19 +46,43 @@ cover parameters the friendly modules never expose. It is also the easiest way
 to corrupt a project, since an unknown id writes somewhere unintended. Probe
 with reads before writes.
 
-## Not reachable, at any price
+## `transport.globalTransport` is FL's own command bus
 
-No amount of injection reaches these. They have no API.
+The most underrated surface, and the reason "there is no API for that" is
+usually wrong. It dispatches FL's `FPT_*` command ids, which are the same
+commands its buttons and hotkeys drive:
 
-| Want | Reality | Actual options |
+```python
+transport.globalTransport(midi.FPT_Snap, 1)
+transport.globalTransport(midi.FPT_Cut, 1)
+ui.setFocused(midi.widPlaylist)
+ui.left(); ui.right(); ui.enter()
+```
+
+Covers play, record, stop, undo, save, snap and snap mode, cut, copy, paste,
+insert, delete and window switching, among others. Paired with `ui` focus and
+navigation it reaches plenty that has no direct setter.
+
+**The instinct to build:** when something looks unreachable, ask how a person
+would do it from the keyboard, then find those commands on the bus. Run
+`python -m agentfl.probe` to list the `FPT_` constants your build actually
+defines, rather than assuming a name exists.
+
+## No direct setter
+
+None of these have a dedicated API function. Some are still reachable through
+the command bus by doing what a human would do, which is worth trying before
+declaring them impossible.
+
+| Want | Direct API | Keyboard route worth trying |
 |---|---|---|
-| Move, add or delete a playlist clip | `playlist` only does track names, colours, mute and performance mode | posted UI messages, or a human |
-| Load a new plugin instance | nothing in `plugins` creates one | posted UI messages, or a human |
-| Write piano roll notes | separate scripting surface, not reachable from a controller script | FL's own piano roll scripts, triggered manually |
-| Create a pattern from scratch | `patterns` selects and renames, does not create | clone an existing pattern, or a human |
+| Move a playlist clip | none | focus playlist, select, `FPT_Cut`, move playhead, `FPT_Paste` **untested** |
+| Create a pattern | `patterns` selects and renames only | `FPT_` pattern commands, or clone an existing one **untested** |
+| Write piano roll notes | none from a controller script | FL's separate piano roll scripting surface |
+| Load a new plugin instance | none | no route found. Say so rather than attempting |
 
-If a task needs one of these, say so at the start rather than after an hour of
-attempts. That is the single most useful thing this document does.
+Everything marked untested is a candidate, not a capability. Verify against a
+live FL and update this table with what you measured, not what you hoped.
 
 ## Editing the .flp instead
 
