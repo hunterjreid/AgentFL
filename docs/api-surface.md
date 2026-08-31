@@ -1,105 +1,125 @@
-# What FL's Python API can and cannot do
+# FL's API surface, as measured
 
-Knowing the holes matters more than knowing the surface. Every hour lost to
-this project so far went into trying to reach something that has no API, so
-check here before promising a capability.
+Measured against **FL Studio Producer Edition v24.1.2 [build 4394]**, Python
+3.12.1, by injecting into the running application. Nothing here is recalled or
+inferred. Regenerate with `python -m agentfl.probe --sandbox`.
 
-Run `python -m agentfl.probe` against a live FL to regenerate the verified
-half of this document. Anything below marked **unverified** is reasoning from
-the module list, not a measurement, and should be confirmed before it is
-relied on.
+Knowing the holes matters more than knowing the surface, so the things that do
+not work are stated as plainly as the things that do.
 
-## Reachable by injection
+## Module sizes
 
-| Area | Module | Notes |
-|---|---|---|
-| Mixer tracks | `mixer` | volume, pan, mute, solo, name, colour, routing, peaks |
-| Channels | `channels` | volume, pan, mute, solo, name, colour, selection |
-| Plugin parameters | `plugins` | generic by index, works on any VST or native plugin |
-| Transport | `transport` | play, stop, record, song position, loop mode |
-| Tempo | `mixer`, `general` | read directly, write via REC events |
-| Patterns | `patterns` | select, name, colour, count |
-| Arrangement markers | `arrangement` | add and jump to markers |
-| UI navigation | `ui` | focus windows, menus, hint bar, selection |
+| Module | Functions |
+|---|---|
+| `mixer` | 71 |
+| `ui` | 71 |
+| `channels` | 48 |
+| `playlist` | 41 |
+| `device` | 34 |
+| `utils` | 29 |
+| `patterns` | 25 |
+| `general` | 24 |
+| `transport` | 20 |
+| `plugins` | 13 |
+| `arrangement` | 9 |
 
-### Plugin parameters are generic, which is the important one
+## Writing notes: the step sequencer is the way in
 
-There is no per-plugin integration work. FL exposes parameters by index for
-every plugin it hosts:
+The piano roll has no API, but the step sequencer does, and it writes into the
+same pattern:
+
+```python
+channels.setGridBit(channel, step, 1)                 # place a step
+channels.getGridBit(channel, step)                    # read it back
+channels.setStepParameterByIndex(...)                 # per step pitch etc
+channels.getStepParam(...) / getCurrentStepParam(...)
+```
+
+This is the only route from an agent to notes inside a pattern. Verify a write
+with `getGridBit` in the same injection, because a silently ignored write is
+otherwise indistinguishable from success.
+
+## The command bus: 79 commands
+
+`transport.globalTransport(midi.FPT_X, 1)` dispatches FL's own commands, the
+ones its buttons and hotkeys drive. All 79 on this build:
+
+```
+FPT_AddAltMarker  FPT_AddMarker    FPT_ArrangementJog FPT_ChannelJog   FPT_Copy
+FPT_CountDown     FPT_Cut          FPT_Delete         FPT_Down         FPT_Enter
+FPT_Escape        FPT_F1..FPT_F12  FPT_FastForward    FPT_HZoomJog     FPT_Insert
+FPT_ItemMenu      FPT_Jog          FPT_Jog2           FPT_Left         FPT_Loop
+FPT_LoopRecord    FPT_MarkerJumpJog FPT_MarkerSelJog  FPT_Menu         FPT_Metronome
+FPT_MixerWindowJog FPT_Mode        FPT_MoveJog        FPT_Mute         FPT_Next
+FPT_NextMixerWindow FPT_NextWindow FPT_No             FPT_NudgeMinus   FPT_NudgePlus
+FPT_Overdub       FPT_Paste        FPT_PatternJog     FPT_Play         FPT_Previous
+FPT_PreviousNext  FPT_Punch        FPT_PunchIn        FPT_PunchOut     FPT_Record
+FPT_Rewind        FPT_Right        FPT_Save           FPT_SaveNew      FPT_ShuffleJog
+FPT_Snap          FPT_SnapMode     FPT_StepEdit       FPT_Stop         FPT_Strip
+FPT_StripHold     FPT_StripJog     FPT_TapTempo       FPT_TempoJog     FPT_TrackJog
+FPT_Undo          FPT_UndoJog      FPT_UndoUp         FPT_Up           FPT_VZoomJog
+FPT_WaitForInput  FPT_WindowJog    FPT_Yes
+```
+
+`FPT_Save`, `FPT_Undo` and `FPT_Snap` are the ones worth reaching for first:
+save before anything destructive, undo to back out, snap because a move made
+with snap off lands off the grid and looks like an arithmetic bug.
+
+There is no command for adding a channel or loading a plugin. Scanning this
+list for one is how you confirm that, rather than assuming.
+
+## Plugin parameters are generic
+
+No per-plugin work. FL exposes parameters by index for anything it hosts:
 
 ```python
 plugins.getParamCount(index, slotIndex)
 plugins.getParamName(paramIndex, index, slotIndex)
 plugins.getParamValue(paramIndex, index, slotIndex)
 plugins.setParamValue(value, paramIndex, index, slotIndex)
+plugins.isValid(index, slotIndex)
+plugins.getPluginName(index, slotIndex)
 ```
 
-Two real limits. Some VST3 plugins report zero parameters until the wrapper's
-parameter notification is enabled. Many plugins name parameters uselessly
-(`Param 12`), so an agent often has to map names by sweeping values and
-watching what changes rather than by reading the list.
+Two limits worth expecting: some VST3s report zero parameters until the
+wrapper's parameter notification is on, and many name everything `Param 12`,
+in which case map by behaviour (read all values, have the user move the
+control, read again, diff).
 
-### `general.processRECEvent` is the back door
+## Cannot be done
 
-The widest reach in the API. It addresses FL's internal REC event ids, which
-cover parameters the friendly modules never expose. It is also the easiest way
-to corrupt a project, since an unknown id writes somewhere unintended. Probe
-with reads before writes.
+Confirmed by reading the full module listings, not by assumption.
 
-## `transport.globalTransport` is FL's own command bus
+| Want | Why not |
+|---|---|
+| Add a channel | `channels` has no `addChannel`. Nothing on the command bus either |
+| Load a plugin instance | nothing in `plugins` creates one |
+| Move a playlist clip | `playlist` exposes tracks, not clips |
+| Write piano roll notes directly | no API. Use the step sequencer instead |
 
-The most underrated surface, and the reason "there is no API for that" is
-usually wrong. It dispatches FL's `FPT_*` command ids, which are the same
-commands its buttons and hotkeys drive:
-
-```python
-transport.globalTransport(midi.FPT_Snap, 1)
-transport.globalTransport(midi.FPT_Cut, 1)
-ui.setFocused(midi.widPlaylist)
-ui.left(); ui.right(); ui.enter()
-```
-
-Covers play, record, stop, undo, save, snap and snap mode, cut, copy, paste,
-insert, delete and window switching, among others. Paired with `ui` focus and
-navigation it reaches plenty that has no direct setter.
-
-**The instinct to build:** when something looks unreachable, ask how a person
-would do it from the keyboard, then find those commands on the bus. Run
-`python -m agentfl.probe` to list the `FPT_` constants your build actually
-defines, rather than assuming a name exists.
-
-## No direct setter
-
-None of these have a dedicated API function. Some are still reachable through
-the command bus by doing what a human would do, which is worth trying before
-declaring them impossible.
-
-| Want | Direct API | Keyboard route worth trying |
-|---|---|---|
-| Move a playlist clip | none | focus playlist, select, `FPT_Cut`, move playhead, `FPT_Paste` **untested** |
-| Create a pattern | `patterns` selects and renames only | `FPT_` pattern commands, or clone an existing one **untested** |
-| Write piano roll notes | none from a controller script | FL's separate piano roll scripting surface |
-| Load a new plugin instance | none | no route found. Say so rather than attempting |
-
-Everything marked untested is a candidate, not a capability. Verify against a
-live FL and update this table with what you measured, not what you hoped.
-
-## Editing the .flp instead
-
-A project file can be edited offline, which reaches everything above,
-including playlist clips. It is not live: FL must save, close the file, and
-reload it. That breaks the entire point of this repo, so it belongs to batch
-work on projects that are not currently open, never to interactive use.
+An empty project therefore cannot be filled from nothing. Work with the
+channels a project already has, or say a human needs to add the instrument.
+Say it at the start, not after an hour.
 
 ## The sandbox
 
-FL's scripting environment is CPython 3.12 with restrictions. Confirmed
-available: `base64`, `json`, `math`, `time`, `traceback`. No sockets. No
-threads to move slow work onto, which is why injected code blocking FL's UI
-thread is a real hazard rather than a theoretical one.
+Python 3.12.1. More permissive than folklore suggests, and less useful than
+that sounds:
 
-Filesystem access is **unverified**. FL writes `__pycache__` next to the
-kernel, so CPython itself clearly has disk access, but whether `open()` is
-reachable from injected code is a separate question about restricted builtins.
-Worth one probe, because if reads work then large code can be dropped on disk
-and imported instead of chunked over MIDI.
+| Probe | Result |
+|---|---|
+| `import os` | works, returns a real cwd |
+| `import sys` | works |
+| `import socket` | works, `socket.socket` constructs |
+| `import ast` | works |
+| `open` in builtins | present |
+| `tempfile.gettempdir()` | **TypeError: bad argument type for built-in operation** |
+
+So the imports succeed but the underlying file operations are stubbed: the
+failure surfaces deep inside `tempfile`, not at the import. Treat the
+filesystem as unavailable. MIDI SysEx stays the transport, not because nothing
+else exists, but because nothing else works.
+
+Do not conclude from `import socket` succeeding that a socket transport is
+viable. It has not been tested end to end, and the filesystem looked available
+too.

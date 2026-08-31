@@ -14,21 +14,29 @@ python -m agentfl.doctor
 Five layers, checked in order. The first failure is the only one that means
 anything, because a break at one layer makes every check below it noise.
 
-## The failure that actually happens
+## Check the Welcome wizard first. It is the usual cause
 
-The kernel is loaded and healthy inside FL, emitting heartbeats, while the
-agent side hears nothing at all. Both halves look correct in isolation.
+While FL's "Welcome to FL Studio" dialog is open, **no controller script is
+loaded at all**. FL looks completely normal behind it: main form present,
+responsive, MIDI configured. Nothing reaches the wire.
 
-Tell it apart in one glance: **look at FL's hint bar, top left of FL's
-window.** If it reads `AgentFL ready`, the kernel is running fine and the
-problem is purely that FL is not routing its output.
+```bash
+python scripts/restart_fl.py launch     # waits for the form, then dismisses it
+```
 
-Fix, in FL: **Options > MIDI Settings**, the **Output** list. Enable
-`FLStudioMCP TX` and set its Port number to the same number `FLStudioMCP RX`
-has in the Input list.
+Heartbeats start within a second of the dialog closing. Check this before
+touching any configuration, because it presents exactly like a broken script,
+a broken route and a broken install all at once. See `docs/install-traps.md`
+for the other four ways a script silently fails to load.
 
-This is worth internalising because the symptom points at the script and the
-cause is a checkbox. Do not start rewriting the kernel.
+## Reading the wire directly beats every other diagnostic
+
+Traffic means the kernel is alive, silence means it is not, and nothing else
+is as decisive. AgentFL heartbeats carry magic `7d 41 47 46` (`}AGF`) twice a
+second.
+
+Do not use a missing `__pycache__` as evidence: FL has been observed running a
+script without writing one.
 
 ## Layer by layer
 

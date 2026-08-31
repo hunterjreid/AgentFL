@@ -65,9 +65,30 @@ if (-not (Test-Path $scriptDir)) {
     throw "No controller script folder at $scriptDir. Run kernel\install.ps1 first."
 }
 
+# FL stores EVERY value under these device keys as REG_SZ, including numeric
+# looking ones like Port and Enabled. Writing one as a DWORD does not fail
+# here: FL reads it at startup, throws "Invalid data type for 'Enabled'", and
+# hard crashes with a callstack that points into FLEngine_x64.dll and looks
+# nothing like a registry problem. Always write strings, and prove it after.
 $previous = (Get-ItemProperty $devicePath).ScriptFolder
-Set-ItemProperty $devicePath -Name 'ScriptFolder' -Value $Use
-Set-ItemProperty $devicePath -Name 'Enabled' -Value 1 -Type DWord
+
+$key = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey(
+    "Software\Image-Line\$FLVersionKey\Devices\MIDI input\$Device", $true)
+try {
+    foreach ($pair in @(@{N = 'ScriptFolder'; V = $Use }, @{N = 'Enabled'; V = '1' })) {
+        if ($key.GetValueNames() -contains $pair.N) { $key.DeleteValue($pair.N, $false) }
+        $key.SetValue($pair.N, $pair.V, [Microsoft.Win32.RegistryValueKind]::String)
+    }
+
+    $bad = @($key.GetValueNames() | Where-Object {
+            $key.GetValueKind($_) -ne [Microsoft.Win32.RegistryValueKind]::String
+        })
+    if ($bad.Count) {
+        throw "these values are not REG_SZ and will crash FL on startup: $($bad -join ', ')"
+    }
+}
+finally { $key.Close() }
 
 Write-Host "Bound '$Device' to script '$Use' (was '$previous')." -ForegroundColor Green
+Write-Host "All values verified as REG_SZ." -ForegroundColor DarkGray
 Write-Host "Start FL Studio. Revert any time with:  .\use-kernel.ps1 -Use $previous"

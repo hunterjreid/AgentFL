@@ -1,6 +1,15 @@
 # name=AgentFL
-# supportedDevices=AgentFL
+# url=https://github.com/hunterjreid/agent-fl
+# receiveFrom=
+# supportedDevices=
 """AgentFL kernel: a permanent, capability-free bridge into FL Studio.
+
+Leave `supportedDevices` EMPTY. Naming a device there tells FL the script only
+binds to a port with exactly that name, so FL silently filters the script out
+for every other port and never imports it. The symptom is indistinguishable
+from a script that crashed on import: no output, no error, and no
+`__pycache__` next to the file. That missing `__pycache__` is the quickest way
+to tell "FL never loaded this" from "FL loaded it and it failed".
 
 This file is deliberately the ONLY thing that ever gets installed into FL.
 It exposes exactly three commands: ping, inject, and cancel. It knows
