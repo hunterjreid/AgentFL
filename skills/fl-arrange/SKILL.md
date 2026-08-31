@@ -1,42 +1,46 @@
 ---
 name: fl-arrange
-description: Place pattern clips in the playlist and arrange a track. Read this before attempting arrangement, because the automated routes are measured and they do not work.
+description: Place pattern clips in the playlist and arrange a track. Read this before attempting arrangement, because seven routes are already eliminated and the remaining leads are listed.
 ---
 
-# Arranging, and why the agent cannot do it alone
+# Arranging: unsolved, and the highest value thing to solve
 
-This is the one boundary in FL that has not been crossed. Read this before
-promising an arrangement, not after an hour of attempts.
+This is the most important missing capability. It is **not solved and not
+closed**. Read `docs/arrangement-investigation.md` before starting, so you
+work the frontier instead of repeating dead ends.
 
-## Three routes, all measured, all closed
+## Do not repeat these. All eliminated by measurement
 
-**No API.** `playlist` exposes 41 functions and not one touches clips. It is
-tracks (`getTrackName`, `setTrackColor`, `muteTrack`, `soloTrack`,
-`selectTrack`), live performance mode, and display zone. `arrangement` adds
-markers and selection only. There is no add, move or delete for clips.
+- `playlist` module: 41 functions, none touch clips
+- `arrangement` module: 9 functions, markers and selection only
+- all 79 `FPT_` command bus ids
+- `ui.insert` / `ui.paste` / `ui.enter` with the playlist focused
+- `FPT_Insert` / `FPT_Paste` / `FPT_ItemMenu` / `FPT_Menu`, undo never moved
+- posted mouse clicks: delivered, ignored, FL reads the real cursor
+- posted keyboard: delivered, ignored
 
-**Not on the command bus.** All 79 `FPT_` commands were listed. Nothing places
-a clip. `FPT_Cut`, `FPT_Copy` and `FPT_Paste` exist, but they act on an
-existing selection, and there is nothing to select in an empty playlist.
+## The live lead: the REC bus
 
-**Posted clicks are ignored.** A `WM_LBUTTONDOWN` / `WM_LBUTTONUP` pair posted
-to FL's main form at valid playlist client coordinates placed nothing. The
-message was delivered and the physical cursor correctly did not move. FL takes
-mouse capture and reads the real cursor position, so posted input does not
-drive the playlist. This is measured on FL 24.1.2, not assumed.
+`general.processRECEvent` is readable via `REC_GetValue = 2`, verified by
+reading `REC_Tempo` back as `140000`. Playlist clip constants exist
+(`REC_PLClip_First/Last`, `REC_Pat_Clip`, `REC_PLTrack_First/Last`).
 
-## What to do instead
+Only 9 of 65536 item offsets were sampled. **That is a sample, not a search.**
+The untried leads, in order, are in the investigation doc: the low id
+namespace starting at `0x00000000`, a full item sweep, the `REC_Chan_*` bases,
+other flag combinations, song mode plus record, and the piano roll scripting
+surface.
 
-Say it plainly and early: **arrangement is the human's part.** Do everything
-else, and hand over a project where placing clips is the only thing left.
+## Rules
 
-Do not:
-
-- reach for `SetCursorPos` or `mouse_event`. Banned, and the reason is in
-  CLAUDE.md. The user keeps their mouse
-- retry posted clicks with different coordinates. The coordinates were right
-- claim an arrangement happened because a call returned without error. Look at
-  the playlist
+- reading is safe, writing to an unidentified id is not. `general.undoUp()`
+  recovers
+- `getUndoHistoryPos()` before and after detects change cheaply
+- `ui.getHintMsg()` after a write tells you what FL thinks it did. That is how
+  `0x50015000` was identified as a knob rather than a clip
+- batch large reads. A big result exceeds the SysEx chunk limit and hangs
+- never say "impossible" from a sampled search. Say what was sampled
+- `SetCursorPos` and `mouse_event` stay banned. The user keeps their mouse
 
 ## What the agent can still do for an arrangement
 
