@@ -1,5 +1,41 @@
 # Rules for agents working in this repo
 
+## What this is for
+
+An agent that makes music end to end: build a beat, chop vocals, arrange,
+mix. Not a tool server, and not a catalogue of FL commands. Judge every
+addition by whether it moves a track closer to finished.
+
+**This is not an MCP server and must not become one.** There is no server
+process in the path. Python talks raw SysEx over loopMIDI straight into FL's
+interpreter. A fixed set of tool endpoints is the exact design that made the
+old bridge useless: it can only ever contain what someone thought of in
+advance, and extending it costs an FL restart.
+
+Hunter's material: 130 to 150 BPM, Brazilian phonk and montagem, AU/NZ drill.
+Assume real projects with unsaved work open, never a scratch file.
+
+## Making a beat needs more than injection, and you must plan for that
+
+Injection reaches mixing, plugin parameters, routing, transport and tempo. It
+does **not** reach the three things a beat actually needs: writing notes,
+loading instruments, and slicing audio. Do not start a beat task by pretending
+otherwise. The routes that work:
+
+**Notes: play them in as real MIDI.** FL records MIDI arriving on its input
+port exactly as it records a keyboard. Arm recording and select the channel by
+injection, then send real note messages over the same loopMIDI port. The
+kernel deliberately leaves non-SysEx traffic unhandled so FL processes it
+normally. This is the mouse-free way to write notes and it is the backbone of
+beat making here.
+
+**Vocal chops: cut outside, import the slices.** Slice detection and rendering
+belong in Python with ffmpeg, where they are testable. FL receives finished
+audio.
+
+**Instruments: cannot be loaded.** Work with what the project already has, or
+say a human has to add it. Never burn an hour trying.
+
 ## Never move the physical cursor
 
 `SetCursorPos`, `mouse_event` and `SendInput` are banned. There is one pointer
