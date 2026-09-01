@@ -1,4 +1,4 @@
-# agent-fl
+# AgentFL
 
 Drive FL Studio the way an agent drives a browser. FL is the page, and injected
 Python is the JavaScript console.
@@ -135,3 +135,10 @@ It looks like an odd transport for RPC. It is the only one available. FL's
 scripting sandbox gives a script no sockets and no filesystem, so MIDI SysEx is
 the only way bytes leave the process. Every richer looking option is not slower,
 it is absent.
+
+## License
+
+MIT. See `LICENSE`.
+
+FL Studio and Image-Line are trademarks of Image-Line nv. This project is not
+affiliated with or endorsed by them.
