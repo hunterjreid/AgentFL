@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/banner.png" alt="AgentFL, an AI agent for FL Studio" width="100%">
+</p>
+
 # AgentFL
 
 Drive FL Studio the way an agent drives a browser. FL is the page, and injected
