@@ -19,6 +19,7 @@ it meaningless:
 from __future__ import annotations
 
 import subprocess
+import time
 from dataclasses import dataclass, field
 
 import mido
@@ -88,6 +89,23 @@ def diagnose(rx: str = bridge.DEFAULT_RX,
     ))
     if win is None:
         return report
+
+    # 1b -- the welcome splash, which blocks controller script loading entirely.
+    # Cleared rather than reported, because there is no judgement call here and
+    # leaving it up makes every check below meaningless.
+    if window.welcome_wizard() is not None:
+        cleared = window.dismiss_welcome()
+        report.checks.append(Check(
+            "welcome splash cleared",
+            cleared,
+            detail="was blocking script load" if cleared else "still up",
+            fix="Close the 'Welcome to FL Studio' window by hand.",
+        ))
+        if not cleared:
+            return report
+        # FL loads controller scripts once the splash goes; heartbeats follow
+        # within about a second.
+        time.sleep(2.0)
 
     # 2 -- ports exist
     outs, ins = mido.get_output_names(), mido.get_input_names()

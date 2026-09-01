@@ -13,6 +13,7 @@ you nothing about whether it is on screen; check `visible`.
 from __future__ import annotations
 
 import ctypes
+import time
 from ctypes import wintypes
 from dataclasses import dataclass
 
@@ -21,6 +22,9 @@ user32 = ctypes.WinDLL("user32", use_last_error=True)
 MAIN_FORM_CLASS = "TFruityLoopsMainForm"
 HINT_BAR_CLASS = "TFLHintBarForm"
 SCRIPT_OUTPUT_CLASS = "TPythonForm"
+WELCOME_WIZARD_CLASS = "TWelcomeWizard"
+
+WM_CLOSE = 0x0010
 
 _EnumWindowsProc = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
 
@@ -109,6 +113,49 @@ def main_window() -> Win | None:
         minimized=bool(user32.IsIconic(hwnd)),
         rect=_rect(hwnd),
     )
+
+
+def welcome_wizard() -> Win | None:
+    """FL's "Welcome to FL Studio" splash, or None when it is not up."""
+    hwnd = user32.FindWindowW(WELCOME_WIZARD_CLASS, None)
+    if not hwnd or not user32.IsWindowVisible(hwnd):
+        return None
+    return Win(
+        hwnd=hwnd,
+        cls=WELCOME_WIZARD_CLASS,
+        title=_text(hwnd),
+        visible=True,
+        minimized=bool(user32.IsIconic(hwnd)),
+        rect=_rect(hwnd),
+    )
+
+
+def dismiss_welcome(timeout: float = 3.0) -> bool:
+    """Close the welcome splash, returning True only if it actually went away.
+
+    This is a bootstrap step, not a convenience. While the splash is up FL
+    loads no controller script at all, so the kernel never starts and every
+    layer below reports a dead bridge. FL looks completely normal behind it,
+    which is why this gets misdiagnosed as routing and then as the kernel's own
+    code.
+
+    It cannot be solved by injection, because injection is the thing the splash
+    is preventing. It has to be done from outside, and WM_CLOSE is enough: the
+    splash is an ordinary VCL form, so it honours a posted close. Nothing here
+    touches the physical cursor.
+    """
+    win = welcome_wizard()
+    if win is None:
+        return False
+
+    user32.PostMessageW(win.hwnd, WM_CLOSE, 0, 0)
+
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if welcome_wizard() is None:
+            return True
+        time.sleep(0.1)
+    return False
 
 
 def screen_to_client(hwnd: int, x: int, y: int) -> tuple[int, int]:

@@ -14,20 +14,31 @@ python -m agentfl.doctor
 Five layers, checked in order. The first failure is the only one that means
 anything, because a break at one layer makes every check below it noise.
 
-## Check the Welcome wizard first. It is the usual cause
+## The Welcome splash. Handled automatically, but know why
 
 While FL's "Welcome to FL Studio" dialog is open, **no controller script is
 loaded at all**. FL looks completely normal behind it: main form present,
 responsive, MIDI configured. Nothing reaches the wire.
 
-```bash
-python scripts/restart_fl.py launch     # waits for the form, then dismisses it
+`agentfl.doctor` now clears it on its own, as layer 1b, and reports
+`welcome splash cleared` when it did. So on a freshly launched FL the usual
+sequence is one doctor run and a healthy bridge, with no manual step.
+
+The mechanism matters if you ever have to do it by hand. The splash is class
+`TWelcomeWizard`, an ordinary VCL form, so it honours a posted `WM_CLOSE`:
+
+```python
+from agentfl import window
+window.dismiss_welcome()     # True only if it actually went away
 ```
 
-Heartbeats start within a second of the dialog closing. Check this before
-touching any configuration, because it presents exactly like a broken script,
-a broken route and a broken install all at once. See `docs/install-traps.md`
-for the other four ways a script silently fails to load.
+**This cannot be solved by injection**, because injection is the exact thing
+the splash prevents. It is a bootstrap problem and has to be driven from
+outside FL. Nothing in that path touches the physical cursor.
+
+Heartbeats start within a second of the dialog closing. See
+`docs/install-traps.md` for the other four ways a script silently fails to
+load.
 
 ## Reading the wire directly beats every other diagnostic
 
