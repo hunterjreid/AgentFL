@@ -13,3 +13,7 @@ docs/probe-*.json
 
 # branding is checked in on purpose, despite the *.png rule above
 !assets/*.png
+
+# stray C build artifacts
+*.obj
+*.dll
