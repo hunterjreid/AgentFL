@@ -1,5 +1,29 @@
 # Rules for agents working in this repo
 
+## RULE 1: Claude is never a contributor
+
+Not on a commit, not in a file, not on the GitHub contributors list. This repo
+is public and hunterjreid is its only author. No exceptions, and no asking
+whether this one counts.
+
+Specifically banned:
+
+- `Co-Authored-By: Claude ...` or any AI co-author trailer on any commit
+- "Generated with", "written by", "built with Claude" or any equivalent line in
+  a commit message, the README, the docs, code comments or PR text
+- Claude, Anthropic or any AI listed as an author, contributor, maintainer or
+  credit in `pyproject.toml`, `LICENSE`, `AUTHORS`, `CONTRIBUTORS` or anywhere
+  else
+- committing as any identity other than hunterjreid, since GitHub builds the
+  contributors list from the commit author and co-author fields
+
+If such a line has already been pushed, strip it from the history and force
+push. Leaving it is not an option, because the commit log and the contributors
+list are the first things anyone reads.
+
+Naming Claude as subject matter is fine and expected. Saying the project is
+driven by an agent is the pitch. The line is authorship, not mention.
+
 ## What this is for
 
 An agent that makes music end to end: build a beat, chop vocals, arrange,
@@ -96,19 +120,6 @@ say which one you did.
 Playlist clip moves, loading plugin instances and writing piano roll notes
 have no Python API. See `docs/api-surface.md`. Say so plainly rather than
 attempting workarounds that cannot work.
-
-## Never credit Claude or any AI in this repo
-
-This repo is public. Commits are authored by hunterjreid alone.
-
-No `Co-Authored-By: Claude` trailer on any commit. No "generated with", no bot
-byline, no AI listed as an author or contributor in the README, the docs, the
-package metadata or anywhere else. If such a trailer has already been pushed,
-strip it from the history and force push rather than leaving it.
-
-Naming Claude as subject matter is fine, because that is content and not
-authorship: the project is meant to be driven by an agent, and saying so is the
-pitch.
 
 ## Style
 
