@@ -30,11 +30,13 @@ An agent that makes music end to end: build a beat, chop vocals, arrange,
 mix. Not a tool server, and not a catalogue of FL commands. Judge every
 addition by whether it moves a track closer to finished.
 
-**This is not an MCP server and must not become one.** There is no server
-process in the path. Python talks raw SysEx over loopMIDI straight into FL's
-interpreter. A fixed set of tool endpoints is the exact design that made the
-old bridge useless: it can only ever contain what someone thought of in
-advance, and extending it costs an FL restart.
+**Where this is going: anyone connects over MCP and makes a whole song in
+natural language.** Hunter set this direction on 24 Sep 2026, replacing the
+earlier "never an MCP server" rule. What made the old bridge useless still
+holds, so the MCP surface stays thin: a handful of general tools (run Python in
+FL, drop a file at a place, click or drag at a place, capture a window, read
+state) rather than a catalogue of FL commands. Capability still arrives as
+Python and native actions, never as a new kernel endpoint.
 
 Hunter's material: 130 to 150 BPM, Brazilian phonk and montagem, AU/NZ drill.
 Assume real projects with unsaved work open, never a scratch file.
@@ -115,11 +117,21 @@ An injected call returning `ok` means the call did not raise. It does not mean
 the result is what was wanted. Read the value back, or capture the window, and
 say which one you did.
 
-## Know what is impossible before promising it
+## Know what needs the native pointer
 
-Playlist clip moves, loading plugin instances and writing piano roll notes
-have no Python API. See `docs/api-surface.md`. Say so plainly rather than
-attempting workarounds that cannot work.
+Adding channels, loading synths and mixer effects, and placing playlist clips
+have no Python API, and all of them now work through the native pointer
+(`agentfl/drop.py`, `agentfl/mouse.py`). Read `docs/native-pointer.md` before
+using them: every trap there was hit for real. FL must be open and not
+minimised; it does not need to be in front, focused, or under the mouse.
+
+Writing piano roll notes with lengths (long 808s) is still not done.
+
+## Do not play audio unless asked
+
+Never start playback to check something. Read-backs and window captures work
+with the transport stopped; meters only move during playback, so level checks
+wait until he asks to hear it. Hunter asked for this explicitly.
 
 ## Style
 
