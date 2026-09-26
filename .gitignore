@@ -17,3 +17,5 @@ docs/probe-*.json
 # stray C build artifacts
 *.obj
 *.dll
+*.exp
+*.lib
