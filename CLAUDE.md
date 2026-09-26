@@ -35,7 +35,8 @@ natural language.** Hunter set this direction on 24 Sep 2026, replacing the
 earlier "never an MCP server" rule. What made the old bridge useless still
 holds, so the MCP surface stays thin: a handful of general tools (run Python in
 FL, drop a file at a place, click or drag at a place, capture a window, read
-state) rather than a catalogue of FL commands. Capability still arrives as
+state) rather than a catalogue of FL commands. That server is `agentfl/mcp_server.py`.
+Capability still arrives as
 Python and native actions, never as a new kernel endpoint.
 
 Hunter's material: 130 to 150 BPM, Brazilian phonk and montagem, AU/NZ drill.
@@ -126,6 +127,10 @@ using them: every trap there was hit for real. FL must be open and not
 minimised; it does not need to be in front, focused, or under the mouse.
 
 Writing piano roll notes with lengths (long 808s) is still not done.
+
+The six actions an agent gets, as a CLI (`agentfl`) and an MCP server
+(`agentfl-mcp`), live in `agentfl/actions.py`. Keep them general. The visible
+agent pointer is off unless `AGENTFL_GHOST=1`.
 
 ## Do not play audio unless asked
 

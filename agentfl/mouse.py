@@ -5,7 +5,7 @@ playlist, the piano roll), which ask the system where the cursor is and
 whether the button is held. `fldrop.dll` answers those questions from the
 agent's pointer while it sends the mouse messages, on FL's UI thread.
 
-The agent pointer (see `ghost`) is shown at every point, so the human can
+With AGENTFL_GHOST=1 the agent pointer (see `ghost`) is shown at every point, so the human can
 watch what the agent does while keeping their own mouse.
 """
 
@@ -18,6 +18,7 @@ from ctypes import wintypes as W
 from pathlib import Path
 
 from agentfl import drop, ghost, window
+from agentfl.ghost import ghost_enabled
 
 _u = ctypes.WinDLL("user32", use_last_error=True)
 _u.SetWindowsHookExW.restype = W.HHOOK
@@ -27,11 +28,13 @@ _u.PostMessageW.argtypes = [W.HWND, W.UINT, W.WPARAM, W.LPARAM]
 _u.GetWindowThreadProcessId.argtypes = [W.HWND, ctypes.POINTER(W.DWORD)]
 
 
-def run(ops: list[tuple], label: str = "agent", show: bool = True, timeout: float = 10.0) -> str:
+def run(ops: list[tuple], label: str = "agent", show: bool | None = None, timeout: float = 10.0) -> str:
     """Run mouse ops, each ("move"|"ldown"|"lup"|"rdown"|"rup", sx, sy) or ("wait", ms)."""
     main = window.main_window()
     if main is None:
         raise RuntimeError("FL is not running")
+    if show is None:
+        show = ghost_enabled()
     if show:
         first = next((o for o in ops if o[0] != "wait"), None)
         if first:

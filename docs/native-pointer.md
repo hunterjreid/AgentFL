@@ -119,3 +119,24 @@ own cursor and can see what the agent is doing.
   control id 1001, then post `WM_COMMAND IDOK`.
 - **The render window (`TWAVRenderForm`) starts on a posted Enter.** Its
   buttons are drawn, not controls. A 32 bar song rendered to MP3 in 5 s.
+
+## Traps found building the README demo (26 Sep 2026)
+
+- **A step that is already on keeps its old note.** `setGridBit(ch, s, 1)` on a
+  lit step plus a new `pPitch` stacks a second note under the first, so the
+  channel plays chords. Turn every step off first, then write.
+- **Bar snap rounds to the nearest bar.** A click at exactly the centre of bar
+  1 lands the clip on bar 2. Aim about 30 percent into the bar.
+- **Off screen, FL leaves black holes in a capture.** It skips painting what
+  is off the desktop. `screen.capture_window` forces a full repaint first.
+- **The user may move FL while you work.** Maximising it changed the layout
+  under a run of clicks and five placements missed. Re-measure from a fresh
+  capture after anything outside the agent could have touched FL.
+- **FL crashed once in `USER32!GetWindowRect`** (access violation, offset
+  0x3cf8b on 10.0.26100.9444) straight after a clip placement. The native
+  pointer does not patch that function; the cause is not known. The same
+  placements ran clean after a relaunch. Save before long click runs.
+- **`FPT_Save` on an unsaved project opens Save As in FL's last used
+  folder,** which can be one of the user's own project folders. Fill the
+  filename box yourself (`Edit` with control id 1001, found by walking the
+  dialog's children) rather than accepting the default.

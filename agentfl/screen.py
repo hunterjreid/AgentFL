@@ -30,6 +30,43 @@ def grab_region(left: int, top: int, right: int, bottom: int, path: str | Path,
     return path
 
 
+def capture_window(hwnd: int):
+    """Render a window into an image without reading the screen.
+
+    PrintWindow with PW_RENDERFULLCONTENT asks DWM for the window's own
+    surface, so FL can sit behind other windows, or on a monitor the user is
+    not looking at, and the capture is still of FL rather than of whatever
+    covers it. A screen grab would show the cover.
+    """
+    import ctypes
+    from ctypes import wintypes as W
+
+    from PIL import Image
+
+    u, g = ctypes.windll.user32, ctypes.windll.gdi32
+    # FL skips painting whatever is off the visible desktop, so a window parked
+    # off screen comes back with black holes. Repaint all of it first.
+    u.RedrawWindow(hwnd, None, None, 0x1 | 0x80 | 0x100 | 0x400)  # INVALIDATE ALLCHILDREN UPDATENOW FRAME
+    r = W.RECT()
+    u.GetWindowRect(hwnd, ctypes.byref(r))
+    w, h = r.right - r.left, r.bottom - r.top
+    wdc = u.GetWindowDC(hwnd)
+    mdc = g.CreateCompatibleDC(wdc)
+    bmp = g.CreateCompatibleBitmap(wdc, w, h)
+    old = g.SelectObject(mdc, bmp)
+    try:
+        u.PrintWindow(hwnd, mdc, 2)  # PW_RENDERFULLCONTENT
+        info = (ctypes.c_uint32 * 10)(40, w, (-h) & 0xFFFFFFFF, 1 | (32 << 16), 0, 0, 0, 0, 0, 0)
+        buf = ctypes.create_string_buffer(w * h * 4)
+        g.GetDIBits(mdc, bmp, 0, h, buf, info, 0)
+        return Image.frombuffer("RGB", (w, h), buf, "raw", "BGRX", 0, 1)
+    finally:
+        g.SelectObject(mdc, old)
+        g.DeleteObject(bmp)
+        g.DeleteDC(mdc)
+        u.ReleaseDC(hwnd, wdc)
+
+
 def grab_fl(path: str | Path, *, region: tuple[int, int, int, int] | None = None,
             scale: int = 1) -> Path:
     """Capture FL's main window, or a sub-region of it.

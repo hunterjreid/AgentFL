@@ -18,6 +18,7 @@ from ctypes import wintypes as W
 from pathlib import Path
 
 from agentfl import window
+from agentfl.ghost import ghost_enabled
 
 # A hooked DLL stays loaded in FL, so each rebuild gets a new name and the
 # newest one is used.
@@ -68,7 +69,7 @@ def find_target(name: str) -> int:
 
 
 def drop(files: list[str], target: str = "channels", at: tuple[int, int] | None = None,
-         timeout: float = 5.0, show: bool = True, label: str = "") -> str:
+         timeout: float = 5.0, show: bool | None = None, label: str = "") -> str:
     """Drop `files` on a FL window. `at` is a client point, default the centre.
 
     Returns the helper's report line. "ok ... drop=0x00000000" means FL
@@ -89,6 +90,8 @@ def drop(files: list[str], target: str = "channels", at: tuple[int, int] | None 
     else:
         sx, sy = window.client_to_screen(hwnd, *at)
 
+    if show is None:
+        show = ghost_enabled()
     if show:
         from agentfl import ghost
         ghost.point_to(sx, sy, label or f"drop {Path(paths[0]).stem}")

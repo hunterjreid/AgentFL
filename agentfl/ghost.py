@@ -14,12 +14,19 @@ localhost UDP port for "x y label" lines in screen coordinates.
 
 from __future__ import annotations
 
+import os
 import socket
 import subprocess
 import sys
 import time
 
 PORT = 47831
+
+
+def ghost_enabled() -> bool:
+    """Off unless asked for. The pointer is for watching; nothing needs it."""
+    return os.environ.get("AGENTFL_GHOST") == "1"
+
 _sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 

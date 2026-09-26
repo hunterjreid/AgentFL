@@ -9,7 +9,12 @@ dependencies = [
     "Pillow>=10.0",
 ]
 
+[project.optional-dependencies]
+mcp = ["mcp>=1.2"]
+
 [project.scripts]
+agentfl = "agentfl.cli:main"
+agentfl-mcp = "agentfl.mcp_server:main"
 agentfl-doctor = "agentfl.doctor:main"
 agentfl-probe = "agentfl.probe:main"
 
